@@ -98,6 +98,22 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
+          
+          vector<double> waypoints_x;
+          vector<double> waypoints_y;
+
+          // transform waypoints to be from car's perspective
+          // this means we can consider px = 0, py = 0, and psi = 0
+          // greatly simplifying future calculations
+          for (int i = 0; i < ptsx.size(); i++) {
+            double dx = ptsx[i] - px;
+            double dy = ptsy[i] - py;
+            waypoints_x.push_back(dx * cos(-psi) - dy * sin(-psi));
+            waypoints_y.push_back(dx * sin(-psi) + dy * cos(-psi));
+          }
+          
+          
+          
           double steer_value;
           double throttle_value;
 
