@@ -133,6 +133,7 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+  std::cout << "The state is " << state << std::endl;
   bool ok = true;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
@@ -143,7 +144,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // 4 * 10 + 2 * 9
   size_t n_vars = N * 6 + 2 * (N - 1);
   // TODO: Set the number of constraints
-  size_t n_constraints = 0;
+  size_t n_constraints = 6 * N;
 
   // Initial value of the independent variables.
   // SHOULD BE 0 besides initial state.
@@ -162,6 +163,12 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
   // TODO: Set lower and upper limits for variables.
+
+  for (size_t i = 0; i < delta_start; i++) {
+    vars_lowerbound[i] = -1.0e19;
+    vars_upperbound[i] = 1.0e19;
+  }
+
   for (size_t i = delta_start; i != a_start; ++i)
   {
     vars_lowerbound[i] = -0.436332;
@@ -221,6 +228,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
 
+  std::cout << "Vars is " << vars << std::endl;
   // solve the problem
   CppAD::ipopt::solve<Dvector, FG_eval>(
       options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
@@ -237,14 +245,18 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // `solution.x[i]`.
   std::vector<double> result;
 
+  std::cout << "Throttle is " << solution.x[a_start] <<"\n";
+  std::cout << "Steering is " << solution.x[delta_start] <<"\n";
   result.push_back(solution.x[delta_start]);
   result.push_back(solution.x[a_start]);
 
   for (size_t i = 1; i != N; i++)
   {
-    result.push_back(solution.x[x_start + i]);
-    result.push_back(solution.x[y_start + i]);
+    result.push_back(solution.x[i + x_start]);
+    result.push_back(solution.x[i + y_start]);
   }
+
+  std::cout << "Solution is " << solution.x[a_start] <<"\n";
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
   return result;
