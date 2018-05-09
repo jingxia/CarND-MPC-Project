@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t N = 0;
-double dt = 0;
+const size_t N = 25;
+const double dt = 0.05;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -21,6 +21,15 @@ double dt = 0;
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 
+const size_t x_start = 0;
+const size_t y_start = N;
+const size_t psi_start = 2 * N;
+const size_t v_start = 3 * N;
+const size_t cte_start = 4 * N;
+const size_t epsi_start = 5 * N;
+const size_t delta_start = 6 * N;
+const size_t a_start = 7 * N - 1;
+
 class FG_eval {
  public:
   // Fitted polynomial coefficients
@@ -28,7 +37,9 @@ class FG_eval {
   FG_eval(Eigen::VectorXd coeffs) { this->coeffs = coeffs; }
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
+
   void operator()(ADvector& fg, const ADvector& vars) {
+
    const double ref_v = 35.0;
     // TODO: implement MPC
     // `fg` a vector of the cost constraints, `vars` is a vector of variable values (state & actuators)
@@ -41,20 +52,23 @@ class FG_eval {
     // any anything you think may be beneficial.
 
     // The part of the cost based on the reference state.
-    for (int t = 0; t < N; t++) {
+    for (int t = 0; t < N; t++) 
+    {
       fg[0] += CppAD::pow(vars[cte_start + t], 2);
       fg[0] += CppAD::pow(vars[epsi_start + t], 2);
       fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
-    for (int t = 0; t < N - 1; t++) {
+    for (int t = 0; t < N - 1; t++) 
+    {
       fg[0] += CppAD::pow(vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t], 2);
     }
 
     // Minimize the value gap between sequential actuations.
-    for (int t = 0; t < N - 2; t++) {
+    for (int t = 0; t < N - 2; t++) 
+    {
       fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
       fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
