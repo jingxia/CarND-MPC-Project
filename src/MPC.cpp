@@ -40,7 +40,7 @@ class FG_eval {
 
   void operator()(ADvector& fg, const ADvector& vars) {
 
-   const double ref_v = 35.0;
+   const double ref_v = 70.0;
     // TODO: implement MPC
     // `fg` a vector of the cost constraints, `vars` is a vector of variable values (state & actuators)
     // NOTE: You'll probably go back and forth between this function and
@@ -54,24 +54,24 @@ class FG_eval {
     // The part of the cost based on the reference state.
     for (int t = 0; t < N; t++) 
     {
-      fg[0] += CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+      //fg[0] += 8 * CppAD::pow(vars[cte_start + t], 2);
+      //fg[0] += 2 * CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += 100 * CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
-    for (int t = 0; t < N - 1; t++) 
-    {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t], 2);
-    }
+    //for (int t = 0; t < N - 1; t++) 
+    //{
+    //  fg[0] += 600000 * CppAD::pow(vars[delta_start + t], 2);
+    //  fg[0] += 300 * CppAD::pow(vars[a_start + t], 2);
+    //}
 
-    // Minimize the value gap between sequential actuations.
-    for (int t = 0; t < N - 2; t++) 
-    {
-      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
-    }
+    //// Minimize the value gap between sequential actuations.
+    //for (int t = 0; t < N - 2; t++) 
+    //{
+    //  fg[0] += 300 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+    //  fg[0] += 300 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+    //}
    
     fg[1 + x_start] = vars[x_start];
     fg[1 + y_start] = vars[y_start];
@@ -101,8 +101,15 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + t - 1];
       AD<double> a0 = vars[a_start + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = 0.0;
+      AD<double> psides0 = 0.0;
+      for (size_t i = 0; i != coeffs.size(); ++i)
+      {
+        f0 += coeffs[i] * CppAD::pow(x0, i);
+        psides0 += i * coeffs[i] * CppAD::pow(x0, i - 1);
+      }
+
+      psides0 = CppAD::atan(psides0);
 
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -133,7 +140,6 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
-  std::cout << "The state is " << state << std::endl;
   bool ok = true;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
@@ -228,7 +234,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
 
-  std::cout << "Vars is " << vars << std::endl;
   // solve the problem
   CppAD::ipopt::solve<Dvector, FG_eval>(
       options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
@@ -239,14 +244,11 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Cost
   auto cost = solution.obj_value;
-  std::cout << "Cost " << cost << std::endl;
 
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   std::vector<double> result;
 
-  std::cout << "Throttle is " << solution.x[a_start] <<"\n";
-  std::cout << "Steering is " << solution.x[delta_start] <<"\n";
   result.push_back(solution.x[delta_start]);
   result.push_back(solution.x[a_start]);
 
@@ -256,7 +258,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     result.push_back(solution.x[i + y_start]);
   }
 
-  std::cout << "Solution is " << solution.x[a_start] <<"\n";
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
   return result;

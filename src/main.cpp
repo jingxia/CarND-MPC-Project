@@ -99,36 +99,31 @@ int main() {
           *
           */
           
-          vector<double> waypoints_x;
-          vector<double> waypoints_y;
+          Eigen::VectorXd waypoints_x_eigen(ptsx.size());
+          Eigen::VectorXd waypoints_y_eigen(ptsy.size());
 
           // transform waypoints to be from car's perspective
           // this means we can consider px = 0, py = 0, and psi = 0
           // greatly simplifying future calculations
-          std::cout << 108 << std::endl;
           for (size_t i = 0; i < ptsx.size(); i++) {
             double dx = ptsx[i] - px;
             double dy = ptsy[i] - py;
-            waypoints_x.push_back(dx * cos(-psi) - dy * sin(-psi));
-            waypoints_y.push_back(dx * sin(-psi) + dy * cos(-psi));
+            waypoints_x_eigen[i] = dx * cos(-psi) - dy * sin(-psi);
+            waypoints_y_eigen[i] = dx * sin(-psi) + dy * cos(-psi);
           }
           
-          
-          double* ptrx = &waypoints_x[0];
-          double* ptry = &waypoints_y[0];
-          Eigen::Map<Eigen::VectorXd> waypoints_x_eigen(ptrx, 8);
-          Eigen::Map<Eigen::VectorXd> waypoints_y_eigen(ptry, 8);
 
-          Eigen::VectorXd coeffs = polyfit(waypoints_x_eigen, waypoints_y_eigen, 4);
-          //
+          auto coeffs = polyfit(waypoints_x_eigen, waypoints_y_eigen, 3);
+
+          std::cout << coeffs << std::endl;
+
           double cte = coeffs[0];
           double epsi = -1 * atan(coeffs[1]);
 
           Eigen::VectorXd state(6);
           state << 0, 0, 0, v, cte, epsi;
-          std::cout << 129 << std::endl;
+
           std::vector<double> results = mpc.Solve(state, coeffs);
-          
           double steer_value = results[0];
           double throttle_value = results[1];
 
@@ -137,13 +132,15 @@ int main() {
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value / deg2rad(25);
           msgJson["throttle"] = throttle_value;
+          //msgJson["throttle"] = 0.7;
+          std::cout << "Throttle is " << throttle_value << std::endl;
+          std::cout << "steering is " <<steer_value << std::endl;
 
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
-          std::cout << 145 << std::endl;
-          for (size_t i = 2; i < results.size(); i += 2)
+          for (size_t i = 1; i < results.size(); i += 2)
           {
             mpc_x_vals.push_back(results[i]);
             mpc_y_vals.push_back(results[i+1]);
@@ -159,10 +156,10 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          for (double i = 0; i != 80; i += 2)
+          for (size_t i = 0; i != ptsx.size(); i++)
           {
-            next_x_vals.push_back(i);
-            next_y_vals.push_back(polyeval(coeffs, i));
+            next_x_vals.push_back(waypoints_x_eigen[i]);
+            next_y_vals.push_back(waypoints_y_eigen[i]);
           }
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
