@@ -15,9 +15,13 @@ The values chosen for N and dt are 10 and 0.1. Many values are tried including 2
 
 The waypoints are preprocessed by transforming them to the vehicle's perspective (see main.cpp lines 108-113). This simplifies the process to fit a polynomial to the waypoints because the vehicle's x and y coordinates are now at the origin (0, 0) and the orientation angle is also zero.
 
+With experimentation, it's discovered that there's an optimal point for how long you are overlooking, i.e., number of waypoints to consider when fitting the polynomial line (MPC.cpp lines 117 - 118). Too many waypoints will result in a less locally fitted line, making the car to go wild especially when there's S shape turn ahead. Too few waypoints results in the car not turning enough. 
+
+Also there's an optimal point for the degree of fitted line. 3 turns out to be good. I've tried other values, but some result in very weird predictions. 
+
 * Model Predictive Control with Latency:
 
-The approach to dealing with latency was twofold (not counting simply limiting the speed): the original kinematic equations depend upon the actuations from the previous timestep, but with a delay of 100ms (which happens to be the timestep interval) the actuations are applied another timestep later, so the equations have been altered to account for this (MPC.cpp lines 104-107). 
+The approach to dealing with latency was twofold (not counting simply limiting the speed): the original kinematic equations depend upon the actuations from the previous timestep, but with a delay of 100ms (which happens to be the timestep interval) the actuations are applied another timestep later, so the equations have been altered to account for this (MPC.cpp lines 100-103). 
 
 
 
