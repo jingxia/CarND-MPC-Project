@@ -54,23 +54,23 @@ class FG_eval {
     // The part of the cost based on the reference state.
     for (int t = 0; t < N; t++) 
     {
-      fg[0] += CppAD::pow(vars[cte_start + t], 2);
-      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += 1000 * CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += 1000 * CppAD::pow(vars[epsi_start + t], 2);
       fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
     }
 
     // Minimize the use of actuators.
     for (int t = 0; t < N - 1; t++) 
     {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t], 2);
+      fg[0] += 3 * CppAD::pow(vars[delta_start + t], 2);
+      fg[0] += 3 * CppAD::pow(vars[a_start + t], 2);
     }
 
     //// Minimize the value gap between sequential actuations.
     for (int t = 0; t < N - 2; t++) 
     {
-      fg[0] += 300 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += 300 * CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
+      fg[0] += 100 * CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
+      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
     }
    
     fg[1 + x_start] = vars[x_start];
@@ -103,10 +103,13 @@ class FG_eval {
 
       AD<double> f0 = 0.0;
       AD<double> psides0 = 0.0;
-      for (size_t i = 0; i != coeffs.size(); ++i)
+      for (int i = 0; i != coeffs.size(); ++i)
       {
         f0 += coeffs[i] * CppAD::pow(x0, i);
-        psides0 += i * coeffs[i] * CppAD::pow(x0, i - 1);
+        if (i > 0)
+        {
+          psides0 += i * coeffs[i] * CppAD::pow(x0, i - 1);
+        }
       }
 
       psides0 = CppAD::atan(psides0);
@@ -229,8 +232,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   options += "Sparse  true        reverse\n";
   // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Change this as you see fit.
-  options += "Numeric max_cpu_time          0.5\n";
+  options += "Numeric max_cpu_time          15\n";
 
+  std::cout << 238 << std::endl;
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
 
